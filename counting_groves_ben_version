@@ -1,0 +1,151 @@
+#combines 2 previous projects
+
+max_num_boxes=11
+
+pi_0=[[]]
+pi_1=[[[0,0,0]]]
+pi_2=[[[0,0,0],[0,0,1]],[[0,0,0],[0,1,0]],[[0,0,0],[1,0,0]]]
+master_pi=[pi_0,pi_1,pi_2]
+
+def check_if_box_should_be_added(box, partition):
+  we_should_add=True
+  a,b,c=box
+  if box in partition:
+    we_should_add=False
+  if (a>=1)and([a-1,b,c] in partition)==False:
+    we_should_add=False
+  if (b>=1)and([a,b-1,c] in partition)==False:
+    we_should_add=False
+  if (c>=1)and([a,b,c-1] in partition)==False:
+    we_should_add=False
+  return(we_should_add)
+
+def given_single_partitions_produces_list_of_bigger_partitions(given_partition):
+  some_partitions_of_more_boxes = []
+  for element in given_partition:
+    a,b,c=element
+    candidate=[a+1,b,c]
+    result=check_if_box_should_be_added(candidate,given_partition)
+    if result==True:
+      pi_plus = given_partition+[candidate]
+      some_partitions_of_more_boxes.append(pi_plus)
+
+  for element in given_partition:
+    a,b,c=element
+    candidate=[a,b+1,c]
+    result=check_if_box_should_be_added(candidate,given_partition)
+    if result==True:
+      pi_plus = given_partition+[candidate]
+      some_partitions_of_more_boxes.append(pi_plus)
+
+  for element in given_partition:
+    a,b,c=element
+    candidate=[a,b,c+1]
+    result=check_if_box_should_be_added(candidate,given_partition)
+    if result==True:
+      pi_plus = given_partition+[candidate]
+      some_partitions_of_more_boxes.append(pi_plus)
+  return(some_partitions_of_more_boxes)
+
+def deletes_duplicates(collection_of_partitions):
+  trial=collection_of_partitions
+  for element in trial:
+   number=trial.count(element)
+   while number >=2:
+     trial.remove(element)
+     number=trial.count(element)
+  collection_of_partitions=trial
+  return(collection_of_partitions)
+
+#NEXT we need to send individual partitions to get groved on.
+
+#GOAL: given a single partition, count the groves on it.
+
+def given_partition_determines_height(partition):
+  #find size of space needed for grove
+  height=0
+  for box in partition:
+    a,b,c=box
+    height = max(height, a+b+c)
+  height+=2
+  return(height)
+
+def given_partition_and_height_determines_initial_conditions(partition, height):
+  #set everything in the space to 0
+  initial_conditions = []
+
+  for i in range(height):
+    initial_conditions.append([])
+    for j in range(height):
+      initial_conditions[i].append([])
+      for k in range(height):
+        initial_conditions[i][j].append(0)
+  # so now all coordinats have value of 0
+
+  # here we make some coordinates equal to 1
+  for box in partition:
+    a,b,c=box
+    if [a,b,c+1] not in partition:
+      initial_conditions[a][b][c+1]=1
+      initial_conditions[a][b+1][c+1]=1
+      initial_conditions[a+1][b][c+1]=1
+      initial_conditions[a+1][b+1][c+1]=1
+    if [a,b+1,c] not in partition:
+      initial_conditions[a][b+1][c]=1
+      initial_conditions[a][b+1][c+1]=1
+      initial_conditions[a+1][b+1][c]=1
+      initial_conditions[a+1][b+1][c+1]=1
+    if [a+1,b,c] not in partition:
+      initial_conditions[a+1][b][c]=1
+      initial_conditions[a+1][b][c+1]=1
+      initial_conditions[a+1][b+1][c]=1
+      initial_conditions[a+1][b+1][c+1]=1
+    #mission complete!
+  return(initial_conditions)
+
+def given_initial_conditions_and_height_determines_remaining_values(conditions,height):
+  ccr=conditions
+  while ccr[0][0][0]==0:
+    for i in range(height-1):
+      for j in range(height-1):
+        for k in range(height-1):
+          if (ccr[i][j][k]==0) and (ccr[i+1][j][k]!=0) and (ccr[i][j+1][k]!=0) and (ccr[i][j][k+1]!=0):
+            ccr[i][j][k]=(ccr[i+1][j][k]*ccr[i][j+1][k+1]+ccr[i][j+1][k]*ccr[i+1][j][k+1]+ccr[i][j][k+1]*ccr[i+1][j+1][k])/ccr[i+1][j+1][k+1]
+  return(ccr)
+
+def takes_in_a_partition_returns_number_of_groves(partition):
+  test_partition=partition
+  how_tall = given_partition_determines_height(test_partition)
+  values=given_partition_and_height_determines_initial_conditions(test_partition, how_tall)
+  final=given_initial_conditions_and_height_determines_remaining_values(values, how_tall)
+  return(final[0][0][0])
+
+################################### next block generates paritions up to max_num_boxes #################################3
+#yeah, this should be it's own function
+for i in range(2,max_num_boxes):
+  for part in master_pi[i]:
+      if len(master_pi)==i+1:
+        master_pi.append(given_single_partitions_produces_list_of_bigger_partitions(part))
+      elif len(master_pi)==i+2:
+        master_pi[i+1]+=given_single_partitions_produces_list_of_bigger_partitions(part)
+      else: print('something went wrong')
+  for part in master_pi[i+1]:
+    part.sort()
+    master_pi[i+1].sort()
+  master_pi[i+1] = deletes_duplicates(master_pi[i+1])
+################ paritions up to max_num_boxes, i.e. MASTER_PI complete ###########################3
+
+###############################
+for i in range(1,len(master_pi)):
+  grove_count=0
+  for guy in master_pi[i]:
+    temp=takes_in_a_partition_returns_number_of_groves(guy)
+    #print(guy)
+    #print("has")
+    #print(temp)
+    grove_count+=temp
+  print("There is a sum of "+str(grove_count)+" groves on the "+str(len(master_pi[i]))+" partitions with "+str(i)+" boxes.")
+##################################
+
+
+
